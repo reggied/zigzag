@@ -67,7 +67,9 @@ class Cell:
                 step_fwd.connectors[dimension][direction.other] = None
         if step_back not in (None, self):
             if new:
-                raise ConnectionError('Connection already exists: {step_back}')
+                raise ConnectionError(
+                    f'Connection already exists: {step_back}'
+                )
             else:
                 step_back.connectors[dimension][direction] = None
 
