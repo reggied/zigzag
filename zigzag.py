@@ -4,6 +4,10 @@ from collections import defaultdict
 from enum import Enum, auto
 
 
+class ConnectionError(Exception):
+    pass
+
+
 class Direction(Enum):
     POS = auto()
     NEG = auto()
@@ -49,9 +53,26 @@ class Cell:
     def __repr__(self):
         return f'{self.__class__.__name__}({self.value})'
 
-    def connect(self, cell, dimension, direction):
-        self.connectors[dimension][direction] = cell
-        cell.connectors[dimension][direction.other] = self
+    def connect(self, cell, dimension, direction, new=True):
+        my_connectors = self.connectors[dimension]
+        step_fwd = my_connectors[direction]
+        other_connectors = cell.connectors[dimension]
+        step_back = other_connectors[direction.other]
+
+        # Make sure to keep consistency if a connection is being replaced
+        if step_fwd not in (None, cell):
+            if new:
+                raise ConnectionError(f'Connection already exists: {step_fwd}')
+            else:
+                step_fwd.connectors[dimension][direction.other] = None
+        if step_back not in (None, self):
+            if new:
+                raise ConnectionError('Connection already exists: {step_back}')
+            else:
+                step_back.connectors[dimension][direction] = None
+
+        my_connectors[direction] = cell
+        other_connectors[direction.other] = self
 
     def add(self, key, value, dimension, direction=Direction.POS):
         new_cell = Cell(key, value)
@@ -61,7 +82,8 @@ class Cell:
     def cross_connect(self):
         for dimension, connectors in self.connectors.items():
             neg = connectors[Direction.NEG]
-            neg.connect(connectors[Direction.POS], dimension, Direction.POS)
+            positive = Direction.POS
+            neg.connect(connectors[positive], dimension, positive, new=False)
 
     def next_step(self, dimension, direction=Direction.POS):
         return self.connectors[dimension].get(direction)
@@ -72,6 +94,7 @@ if __name__ == '__main__':
     liz = geneology.start('Elizabeth II')
     charles = geneology.add(liz, 'generation', 'Charles')
     ann = geneology.add(charles, 'sibling', 'Ann')
+    ann.connect(liz, 'generation', Direction.NEG, new=False)
     andrew = geneology.add(ann, 'sibling', 'Andrew')
     geneology.add(andrew, 'sibling', 'Edward')
     george = geneology.add(liz, 'generation', 'George VI', Direction.NEG)
