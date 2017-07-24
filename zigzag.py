@@ -1,6 +1,6 @@
 # zigzag engine as I understand it after an explanation by Ted Nelson
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from enum import Enum, auto
 
 
@@ -88,7 +88,21 @@ class Cell:
             neg.connect(connectors[positive], dimension, positive, new=False)
 
     def next_step(self, dimension, direction=Direction.POS):
-        return self.connectors[dimension].get(direction)
+        return self.connectors[dimension][direction]
+
+    def get_row(self, dimension):
+        row = deque([self])
+        for cell in self.path(dimension, Direction.NEG):
+            row.appendleft(cell)
+        for cell in self.path(dimension, Direction.POS):
+            row.append(cell)
+        return row
+
+    def path(self, dimension, direction):
+        cell = self.next_step(dimension, direction)
+        while cell:
+            yield cell
+            cell = cell.next_step(dimension, direction)
 
 
 if __name__ == '__main__':
@@ -102,3 +116,5 @@ if __name__ == '__main__':
     george = geneology.add(liz, 'generation', 'George VI', Direction.NEG)
     geneology.add(george, 'generation', 'Victoria', Direction.NEG)
     geneology.delete(andrew)
+    print(f"Row with Ann in generation dimension: {ann.get_row('generation')}")
+    print(f"Row with Ann in sibling dimension: {ann.get_row('sibling')}")
